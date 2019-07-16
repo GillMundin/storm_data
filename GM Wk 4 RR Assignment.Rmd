@@ -58,11 +58,52 @@ Relevant variables are BGN_DATE, BGN_TIME, STATE, EVTYPE, PROPDMG:CROPDMGEXP, RE
 
 ```{r data_sets}
 health <- data %>% select(STATE, EVTYPE, FATALITIES, INJURIES)
+tidyhealth <- gather(health, outcome, count, -STATE, -EVTYPE)
+tidyhealth$outcome <- as.factor(tidyhealth$outcome)
+
+str(tidyhealth)
 
 econ <- data %>% select(BGN_DATE, BGN_TIME, STATE, EVTYPE, PROPDMG:CROPDMGEXP, REMARKS, REFNUM)
+
+head(tidyhealth, 3)
 ```
 
 ###Determine which weather event caused most injuries and fatalities across entire US
+Use tapply to determine the number of injuries and fatalities for each weather event.
+The number of unique weather events is large, with `r length(unique(tidyhealth$EVTYPE))` different types of weather event.
+A meaningful barchart is difficult to format with this many events therefore equations have 
+been used to determine the weather event responsible for the most injuries and fatalities.
+
+```{r health}
+harm_event <- with(tidyhealth,
+                   tapply(count, 
+                          list(EVTYPE, outcome), 
+                          sum,
+                          na.rm = TRUE)) %>% 
+        as.data.frame()
+
+
+fatal <- harm_event[which.max(harm_event$FATALITIES), ] # harm_event must be df for this to work
+fatalevent <- rownames(fatal)
+nfatal <- fatal[1,1]
+
+injury <- harm_event[which.max(harm_event$INJURIES), ]
+injuryevent <- rownames(injury)
+ninjury <- injury[1,2]
+```
+
+
+
 
 
 ##Results
+####Across the United States, which types of events (as indicated in the \color{red}{\verb|EVTYPE|}EVTYPE variable) are most harmful with respect to population health?
+
+`r fatalevent` was the weather event responsible for the most injuries and fatalities across the United States:
+
+```{r}
+fatal
+injury
+```
+
+`r fatalevent` was responsible for `r nfatal` fatalities and `r as.integer(ninjury)` injuries in the period studied.
