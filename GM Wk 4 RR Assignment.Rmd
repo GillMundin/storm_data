@@ -61,7 +61,26 @@ health <- data %>% select(STATE, EVTYPE, FATALITIES, INJURIES)
 tidyhealth <- gather(health, outcome, count, -STATE, -EVTYPE)
 tidyhealth$outcome <- as.factor(tidyhealth$outcome)
 
-str(tidyhealth)
+# create subsets for last 10 years, and 10 years before that
+# convert data column to date
+
+data$BGN_DATE <- as.Date(as.POSIXct(data$BGN_DATE, format = "%m/%d/%Y %H:%M:%S"))
+
+date1 <- as.Date("2001-12-31")
+date2 <- as.Date("2012-01-01")
+date3 <- as.Date("1991-12-31")
+date4 <- as.Date("2002-01-01")
+
+data90s <- data[data$BGN_DATE > date1 & data$BGN_DATE < date2, ]
+h90s <- data90s %>% select(STATE, EVTYPE, FATALITIES, INJURIES)
+tidyh90s <- gather(h90s, outcome, count, -STATE, -EVTYPE)
+tidyh90s$outcome <- as.factor(tidyh90s$outcome)
+
+data00s <- data[data$BGN_DATE > date3 & data$BGN_DATE < date4, ]
+h00s <- data00s %>% select(STATE, EVTYPE, FATALITIES, INJURIES)
+tidy00s <- gather(h00s, outcome, count, -STATE, -EVTYPE)
+tidy00s$outcome <- as.factor(tidy00s$outcome)
+
 
 econ <- data %>% select(BGN_DATE, BGN_TIME, STATE, EVTYPE, PROPDMG:CROPDMGEXP, REMARKS, REFNUM)
 
@@ -74,7 +93,7 @@ The number of unique weather events is large, with `r length(unique(tidyhealth$E
 A meaningful barchart is difficult to format with this many events therefore equations have 
 been used to determine the weather event responsible for the most injuries and fatalities.
 
-```{r health}
+```{r health, cache= T}
 harm_event <- with(tidyhealth,
                    tapply(count, 
                           list(EVTYPE, outcome), 
@@ -82,14 +101,43 @@ harm_event <- with(tidyhealth,
                           na.rm = TRUE)) %>% 
         as.data.frame()
 
+harm_event90s <- with(tidyh90s,
+                      tapply(count, 
+                             list(EVTYPE, outcome), 
+                             sum,
+                             na.rm = TRUE)) %>% 
+        as.data.frame()
+
+harm_event00s <- with(tidy00s,
+                      tapply(count, 
+                             list(EVTYPE, outcome), 
+                             sum,
+                             na.rm = TRUE)) %>% 
+        as.data.frame()
 
 fatal <- harm_event[which.max(harm_event$FATALITIES), ] # harm_event must be df for this to work
 fatalevent <- rownames(fatal)
 nfatal <- fatal[1,1]
 
+fatal90s <- harm_event90s[which.max(harm_event90s$FATALITIES), ] # harm_event must be df for this to work
+fatalevent90s <- rownames(fatal90s)
+nfatal90s <- fatal90s[1,1]
+
+fatal00s <- harm_event00s[which.max(harm_event00s$FATALITIES), ] # harm_event must be df for this to work
+fatalevent00s <- rownames(fatal00s)
+nfatal00s <- fatal00s[1,1]
+
 injury <- harm_event[which.max(harm_event$INJURIES), ]
 injuryevent <- rownames(injury)
 ninjury <- injury[1,2]
+
+injury90s <- harm_event90s[which.max(harm_event90s$INJURIES), ]
+injuryevent90s <- rownames(injury90s)
+ninjury90s <- injury90s[1,2]
+
+injury00s <- harm_event00s[which.max(harm_event00s$INJURIES), ]
+injuryevent00s <- rownames(injury00s)
+ninjury00s <- injury00s[1,2]
 ```
 
 Rank the data so that a sensible number of events can be plotted
@@ -98,8 +146,20 @@ Rank the data so that a sensible number of events can be plotted
 fatal_rank <- harm_event[order(harm_event$FATALITIES, decreasing = TRUE), ]
 fatal_top_10 <- fatal_rank[1:10, ]
 
+fatal90s_rank <- harm_event90s[order(harm_event90s$FATALITIES, decreasing = TRUE), ]
+fatal90s_top_10 <- fatal90s_rank[1:10, ]
+
+fatal00s_rank <- harm_event00s[order(harm_event00s$FATALITIES, decreasing = TRUE), ]
+fatal00s_top_10 <- fatal00s_rank[1:10, ]
+
 injury_rank <- harm_event[order(harm_event$INJURIES, decreasing = TRUE), ]
 injury_top_10 <- injury_rank[1:10, ]
+
+injury90s_rank <- harm_event90s[order(harm_event90s$INJURIES, decreasing = TRUE), ]
+injury90s_top_10 <- injury90s_rank[1:10, ]
+
+injury00s_rank <- harm_event00s[order(harm_event00s$INJURIES, decreasing = TRUE), ]
+injury00s_top_10 <- injury00s_rank[1:10, ]
 
 str(fatal_top_10)
 str(injury_top_10)
@@ -107,7 +167,11 @@ str(injury_top_10)
 fatal_top_10
 injury_top_10
 
+fatal00s_top_10
+injury00s_top_10
 
+fatal90s_top_10
+injury90s_top_10
 ```
 
 
@@ -122,12 +186,19 @@ injury_top_10
 ```{r}
 fatal
 injury
+
+fatal00s
+injury00s
+
+fatal90s
+injury90s
+
 ```
 
 `r fatalevent` was responsible for `r nfatal` fatalities and `r as.integer(ninjury)` injuries in the period studied.
 
 
-```{r healthplots, fig.height=10}
+```{r healthplots, fig.height=10, cache= TRUE}
 
 par(mfrow=c(2, 1), 
     oma = c(0, 0, 2, 0),
@@ -150,6 +221,64 @@ barplot(injury_top_10$INJURIES,
                      ylab = "# injuries")
 
 mtext("Top 10 events for deaths and injuries over period studied", 
+      outer = TRUE, 
+      cex = 1.5)
+
+```
+
+
+```{r healthplots00s, fig.height=10, cache= TRUE}
+
+par(mfrow=c(2, 1), 
+    oma = c(0, 0, 2, 0),
+    mar = c(12, 8, 4, 2),
+    mgp = c(4, 1, 0))
+
+
+barplot(fatal00s_top_10$FATALITIES, 
+                     names.arg = rownames(fatal00s_top_10), 
+                     las = 2,
+                     col = "light blue",
+                     main = "Deaths",
+                     ylab = "# deaths")
+
+barplot(injury00s_top_10$INJURIES, 
+                     names.arg = rownames(injury00s_top_10), 
+                     las = 2,
+                     col = "orange",
+                     main = "Injuries",
+                     ylab = "# injuries")
+
+mtext("Top 10 events for deaths and injuries 2002 - 2011", 
+      outer = TRUE, 
+      cex = 1.5)
+
+```
+
+
+```{r healthplots90s, fig.height=10, cache= TRUE}
+
+par(mfrow=c(2, 1), 
+    oma = c(0, 0, 2, 0),
+    mar = c(12, 8, 4, 2),
+    mgp = c(4, 1, 0))
+
+
+barplot(fatal90s_top_10$FATALITIES, 
+                     names.arg = rownames(fatal90s_top_10), 
+                     las = 2,
+                     col = "light blue",
+                     main = "Deaths",
+                     ylab = "# deaths")
+
+barplot(injury90s_top_10$INJURIES, 
+                     names.arg = rownames(injury90s_top_10), 
+                     las = 2,
+                     col = "orange",
+                     main = "Injuries",
+                     ylab = "# injuries")
+
+mtext("Top 10 events for deaths and injuries 1992 - 2001", 
       outer = TRUE, 
       cex = 1.5)
 

@@ -79,18 +79,27 @@ health <- data %>% select(STATE, EVTYPE, FATALITIES, INJURIES)
 tidyhealth <- gather(health, outcome, count, -STATE, -EVTYPE)
 tidyhealth$outcome <- as.factor(tidyhealth$outcome)
 
-str(tidyhealth)
-```
+# create subsets for last 10 years, and 10 years before that
+# convert data column to date
 
-```
-## 'data.frame':	1804594 obs. of  4 variables:
-##  $ STATE  : Factor w/ 72 levels "AK","AL","AM",..: 2 2 2 2 2 2 2 2 2 2 ...
-##  $ EVTYPE : Factor w/ 985 levels "   HIGH SURF ADVISORY",..: 834 834 834 834 834 834 834 834 834 834 ...
-##  $ outcome: Factor w/ 2 levels "FATALITIES","INJURIES": 1 1 1 1 1 1 1 1 1 1 ...
-##  $ count  : num  0 0 0 0 0 0 0 0 1 0 ...
-```
+data$BGN_DATE <- as.Date(as.POSIXct(data$BGN_DATE, format = "%m/%d/%Y %H:%M:%S"))
 
-```r
+date1 <- as.Date("2001-12-31")
+date2 <- as.Date("2012-01-01")
+date3 <- as.Date("1991-12-31")
+date4 <- as.Date("2002-01-01")
+
+data90s <- data[data$BGN_DATE > date1 & data$BGN_DATE < date2, ]
+h90s <- data90s %>% select(STATE, EVTYPE, FATALITIES, INJURIES)
+tidyh90s <- gather(h90s, outcome, count, -STATE, -EVTYPE)
+tidyh90s$outcome <- as.factor(tidyh90s$outcome)
+
+data00s <- data[data$BGN_DATE > date3 & data$BGN_DATE < date4, ]
+h00s <- data00s %>% select(STATE, EVTYPE, FATALITIES, INJURIES)
+tidy00s <- gather(h00s, outcome, count, -STATE, -EVTYPE)
+tidy00s$outcome <- as.factor(tidy00s$outcome)
+
+
 econ <- data %>% select(BGN_DATE, BGN_TIME, STATE, EVTYPE, PROPDMG:CROPDMGEXP, REMARKS, REFNUM)
 
 head(tidyhealth, 3)
@@ -118,14 +127,43 @@ harm_event <- with(tidyhealth,
                           na.rm = TRUE)) %>% 
         as.data.frame()
 
+harm_event90s <- with(tidyh90s,
+                      tapply(count, 
+                             list(EVTYPE, outcome), 
+                             sum,
+                             na.rm = TRUE)) %>% 
+        as.data.frame()
+
+harm_event00s <- with(tidy00s,
+                      tapply(count, 
+                             list(EVTYPE, outcome), 
+                             sum,
+                             na.rm = TRUE)) %>% 
+        as.data.frame()
 
 fatal <- harm_event[which.max(harm_event$FATALITIES), ] # harm_event must be df for this to work
 fatalevent <- rownames(fatal)
 nfatal <- fatal[1,1]
 
+fatal90s <- harm_event90s[which.max(harm_event90s$FATALITIES), ] # harm_event must be df for this to work
+fatalevent90s <- rownames(fatal90s)
+nfatal90s <- fatal90s[1,1]
+
+fatal00s <- harm_event00s[which.max(harm_event00s$FATALITIES), ] # harm_event must be df for this to work
+fatalevent00s <- rownames(fatal00s)
+nfatal00s <- fatal00s[1,1]
+
 injury <- harm_event[which.max(harm_event$INJURIES), ]
 injuryevent <- rownames(injury)
 ninjury <- injury[1,2]
+
+injury90s <- harm_event90s[which.max(harm_event90s$INJURIES), ]
+injuryevent90s <- rownames(injury90s)
+ninjury90s <- injury90s[1,2]
+
+injury00s <- harm_event00s[which.max(harm_event00s$INJURIES), ]
+injuryevent00s <- rownames(injury00s)
+ninjury00s <- injury00s[1,2]
 ```
 
 Rank the data so that a sensible number of events can be plotted
@@ -135,8 +173,20 @@ Rank the data so that a sensible number of events can be plotted
 fatal_rank <- harm_event[order(harm_event$FATALITIES, decreasing = TRUE), ]
 fatal_top_10 <- fatal_rank[1:10, ]
 
+fatal90s_rank <- harm_event90s[order(harm_event90s$FATALITIES, decreasing = TRUE), ]
+fatal90s_top_10 <- fatal90s_rank[1:10, ]
+
+fatal00s_rank <- harm_event00s[order(harm_event00s$FATALITIES, decreasing = TRUE), ]
+fatal00s_top_10 <- fatal00s_rank[1:10, ]
+
 injury_rank <- harm_event[order(harm_event$INJURIES, decreasing = TRUE), ]
 injury_top_10 <- injury_rank[1:10, ]
+
+injury90s_rank <- harm_event90s[order(harm_event90s$INJURIES, decreasing = TRUE), ]
+injury90s_top_10 <- injury90s_rank[1:10, ]
+
+injury00s_rank <- harm_event00s[order(harm_event00s$INJURIES, decreasing = TRUE), ]
+injury00s_top_10 <- injury00s_rank[1:10, ]
 
 str(fatal_top_10)
 ```
@@ -193,6 +243,78 @@ injury_top_10
 ## HAIL                      15     1361
 ```
 
+```r
+fatal00s_top_10
+```
+
+```
+##                FATALITIES INJURIES
+## EXCESSIVE HEAT       1212     3728
+## HEAT                  708      878
+## TORNADO               548    11045
+## LIGHTNING             446     2980
+## FLASH FLOOD           439     1260
+## FLOOD                 223     6488
+## TSTM WIND             178     2808
+## HEAT WAVE             172      309
+## RIP CURRENTS          160      215
+## HIGH WIND             151      651
+```
+
+```r
+injury00s_top_10
+```
+
+```
+##                    FATALITIES INJURIES
+## TORNADO                   548    11045
+## FLOOD                     223     6488
+## EXCESSIVE HEAT           1212     3728
+## LIGHTNING                 446     2980
+## TSTM WIND                 178     2808
+## ICE STORM                  66     1873
+## FLASH FLOOD               439     1260
+## WINTER STORM              137     1077
+## THUNDERSTORM WINDS         64      908
+## HEAT                      708      878
+```
+
+```r
+fatal90s_top_10
+```
+
+```
+##                         FATALITIES INJURIES
+## TORNADO                       1112    13588
+## EXCESSIVE HEAT                 691     2797
+## FLASH FLOOD                    539      517
+## LIGHTNING                      370     2250
+## RIP CURRENT                    340      208
+## FLOOD                          247      301
+## HEAT                           229     1222
+## AVALANCHE                      145      103
+## THUNDERSTORM WIND              130     1400
+## EXTREME COLD/WIND CHILL        125       24
+```
+
+```r
+injury90s_top_10
+```
+
+```
+##                   FATALITIES INJURIES
+## TORNADO                 1112    13588
+## EXCESSIVE HEAT           691     2797
+## LIGHTNING                370     2250
+## THUNDERSTORM WIND        130     1400
+## HURRICANE/TYPHOON         64     1275
+## HEAT                     229     1222
+## TSTM WIND                 77     1146
+## WILDFIRE                  75      911
+## FLASH FLOOD              539      517
+## HIGH WIND                 97      486
+```
+
 
 
 
@@ -219,6 +341,42 @@ injury
 ```
 ##         FATALITIES INJURIES
 ## TORNADO       5633    91346
+```
+
+```r
+fatal00s
+```
+
+```
+##                FATALITIES INJURIES
+## EXCESSIVE HEAT       1212     3728
+```
+
+```r
+injury00s
+```
+
+```
+##         FATALITIES INJURIES
+## TORNADO        548    11045
+```
+
+```r
+fatal90s
+```
+
+```
+##         FATALITIES INJURIES
+## TORNADO       1112    13588
+```
+
+```r
+injury90s
+```
+
+```
+##         FATALITIES INJURIES
+## TORNADO       1112    13588
 ```
 
 TORNADO was responsible for 5633 fatalities and 91346 injuries in the period studied.
@@ -252,5 +410,65 @@ mtext("Top 10 events for deaths and injuries over period studied",
 ```
 
 ![](GM_Wk_4_RR_Assignment_files/figure-html/healthplots-1.png)<!-- -->
+
+
+
+```r
+par(mfrow=c(2, 1), 
+    oma = c(0, 0, 2, 0),
+    mar = c(12, 8, 4, 2),
+    mgp = c(4, 1, 0))
+
+
+barplot(fatal00s_top_10$FATALITIES, 
+                     names.arg = rownames(fatal00s_top_10), 
+                     las = 2,
+                     col = "light blue",
+                     main = "Deaths",
+                     ylab = "# deaths")
+
+barplot(injury00s_top_10$INJURIES, 
+                     names.arg = rownames(injury00s_top_10), 
+                     las = 2,
+                     col = "orange",
+                     main = "Injuries",
+                     ylab = "# injuries")
+
+mtext("Top 10 events for deaths and injuries 2002 - 2011", 
+      outer = TRUE, 
+      cex = 1.5)
+```
+
+![](GM_Wk_4_RR_Assignment_files/figure-html/healthplots00s-1.png)<!-- -->
+
+
+
+```r
+par(mfrow=c(2, 1), 
+    oma = c(0, 0, 2, 0),
+    mar = c(12, 8, 4, 2),
+    mgp = c(4, 1, 0))
+
+
+barplot(fatal90s_top_10$FATALITIES, 
+                     names.arg = rownames(fatal90s_top_10), 
+                     las = 2,
+                     col = "light blue",
+                     main = "Deaths",
+                     ylab = "# deaths")
+
+barplot(injury90s_top_10$INJURIES, 
+                     names.arg = rownames(injury90s_top_10), 
+                     las = 2,
+                     col = "orange",
+                     main = "Injuries",
+                     ylab = "# injuries")
+
+mtext("Top 10 events for deaths and injuries 1992 - 2001", 
+      outer = TRUE, 
+      cex = 1.5)
+```
+
+![](GM_Wk_4_RR_Assignment_files/figure-html/healthplots90s-1.png)<!-- -->
 
 The panel plot shows that Tornado was the most significant factor in deaths and injuries.  Excessive heat caused the next greatest amount of deaths.  All other weather events caused far few deaths or injuries than tornado.
