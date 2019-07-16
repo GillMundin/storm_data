@@ -128,8 +128,97 @@ injuryevent <- rownames(injury)
 ninjury <- injury[1,2]
 ```
 
+Rank the data so that a sensible number of events can be plotted
 
 
+```r
+fatal_rank <- harm_event[order(harm_event$FATALITIES, decreasing = TRUE), ]
+fatal_top_10 <- fatal_rank[1:10, ]
+
+injury_rank <- harm_event[order(harm_event$INJURIES, decreasing = TRUE), ]
+injury_top_10 <- injury_rank[1:10, ]
+
+str(fatal_top_10)
+```
+
+```
+## 'data.frame':	10 obs. of  2 variables:
+##  $ FATALITIES: num  5633 1903 978 937 816 ...
+##  $ INJURIES  : num  91346 6525 1777 2100 5230 ...
+```
+
+```r
+str(injury_top_10)
+```
+
+```
+## 'data.frame':	10 obs. of  2 variables:
+##  $ FATALITIES: num  5633 504 470 1903 816 ...
+##  $ INJURIES  : num  91346 6957 6789 6525 5230 ...
+```
+
+```r
+fatal_top_10
+```
+
+```
+##                FATALITIES INJURIES
+## TORNADO              5633    91346
+## EXCESSIVE HEAT       1903     6525
+## FLASH FLOOD           978     1777
+## HEAT                  937     2100
+## LIGHTNING             816     5230
+## TSTM WIND             504     6957
+## FLOOD                 470     6789
+## RIP CURRENT           368      232
+## HIGH WIND             248     1137
+## AVALANCHE             224      170
+```
+
+```r
+injury_top_10
+```
+
+```
+##                   FATALITIES INJURIES
+## TORNADO                 5633    91346
+## TSTM WIND                504     6957
+## FLOOD                    470     6789
+## EXCESSIVE HEAT          1903     6525
+## LIGHTNING                816     5230
+## HEAT                     937     2100
+## ICE STORM                 89     1975
+## FLASH FLOOD              978     1777
+## THUNDERSTORM WIND        133     1488
+## HAIL                      15     1361
+```
+
+Code for barplots displayed in the results
+
+
+```r
+par(mar = c(12, 8, 4, 2))
+
+fatalplot <- barplot(fatal_top_10$FATALITIES, 
+                     names.arg = rownames(fatal_top_10), 
+                     las = 2,
+                     col = "light blue",
+                     main = "Top 10 events causing fatalities over period studied",
+                     ylab = "# deaths")
+```
+
+![](GM_Wk_4_RR_Assignment_files/figure-html/healthplots-1.png)<!-- -->
+
+```r
+injuryplot <- barplot(injury_top_10$INJURIES, 
+                     names.arg = rownames(injury_top_10), 
+                     las = 2,
+                     col = "orange",
+                     main = "Top 10 events causing injuries over period studied",
+                     ylab = "# injuries")
+```
+
+![](GM_Wk_4_RR_Assignment_files/figure-html/healthplots-2.png)<!-- -->
 
 
 ##Results

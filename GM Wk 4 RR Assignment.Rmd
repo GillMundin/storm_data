@@ -92,8 +92,44 @@ injuryevent <- rownames(injury)
 ninjury <- injury[1,2]
 ```
 
+Rank the data so that a sensible number of events can be plotted
+
+```{r rank_health}
+fatal_rank <- harm_event[order(harm_event$FATALITIES, decreasing = TRUE), ]
+fatal_top_10 <- fatal_rank[1:10, ]
+
+injury_rank <- harm_event[order(harm_event$INJURIES, decreasing = TRUE), ]
+injury_top_10 <- injury_rank[1:10, ]
+
+str(fatal_top_10)
+str(injury_top_10)
+
+fatal_top_10
+injury_top_10
 
 
+```
+
+Code for barplots displayed in the results
+
+```{r healthplots}
+par(mar = c(12, 8, 4, 2))
+
+fatalplot <- barplot(fatal_top_10$FATALITIES, 
+                     names.arg = rownames(fatal_top_10), 
+                     las = 2,
+                     col = "light blue",
+                     main = "Top 10 events causing fatalities over period studied",
+                     ylab = "# deaths")
+
+injuryplot <- barplot(injury_top_10$INJURIES, 
+                     names.arg = rownames(injury_top_10), 
+                     las = 2,
+                     col = "orange",
+                     main = "Top 10 events causing injuries over period studied",
+                     ylab = "# injuries")
+
+```
 
 
 ##Results
