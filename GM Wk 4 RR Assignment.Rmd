@@ -110,26 +110,8 @@ injury_top_10
 
 ```
 
-Code for barplots displayed in the results
 
-```{r healthplots}
-par(mar = c(12, 8, 4, 2))
 
-fatalplot <- barplot(fatal_top_10$FATALITIES, 
-                     names.arg = rownames(fatal_top_10), 
-                     las = 2,
-                     col = "light blue",
-                     main = "Top 10 events causing fatalities over period studied",
-                     ylab = "# deaths")
-
-injuryplot <- barplot(injury_top_10$INJURIES, 
-                     names.arg = rownames(injury_top_10), 
-                     las = 2,
-                     col = "orange",
-                     main = "Top 10 events causing injuries over period studied",
-                     ylab = "# injuries")
-
-```
 
 
 ##Results
@@ -143,3 +125,34 @@ injury
 ```
 
 `r fatalevent` was responsible for `r nfatal` fatalities and `r as.integer(ninjury)` injuries in the period studied.
+
+
+```{r healthplots, fig.height=10}
+
+par(mfrow=c(2, 1), 
+    oma = c(0, 0, 2, 0),
+    mar = c(12, 8, 4, 2),
+    mgp = c(4, 1, 0))
+
+
+barplot(fatal_top_10$FATALITIES, 
+                     names.arg = rownames(fatal_top_10), 
+                     las = 2,
+                     col = "light blue",
+                     main = "Deaths",
+                     ylab = "# deaths")
+
+barplot(injury_top_10$INJURIES, 
+                     names.arg = rownames(injury_top_10), 
+                     las = 2,
+                     col = "orange",
+                     main = "Injuries",
+                     ylab = "# injuries")
+
+mtext("Top 10 events for deaths and injuries over period studied", 
+      outer = TRUE, 
+      cex = 1.5)
+
+```
+
+The panel plot shows that Tornado was the most significant factor in deaths and injuries.  Excessive heat caused the next greatest amount of deaths.  All other weather events caused far few deaths or injuries than tornado.

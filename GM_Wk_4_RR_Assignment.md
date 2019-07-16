@@ -193,32 +193,8 @@ injury_top_10
 ## HAIL                      15     1361
 ```
 
-Code for barplots displayed in the results
 
 
-```r
-par(mar = c(12, 8, 4, 2))
-
-fatalplot <- barplot(fatal_top_10$FATALITIES, 
-                     names.arg = rownames(fatal_top_10), 
-                     las = 2,
-                     col = "light blue",
-                     main = "Top 10 events causing fatalities over period studied",
-                     ylab = "# deaths")
-```
-
-![](GM_Wk_4_RR_Assignment_files/figure-html/healthplots-1.png)<!-- -->
-
-```r
-injuryplot <- barplot(injury_top_10$INJURIES, 
-                     names.arg = rownames(injury_top_10), 
-                     las = 2,
-                     col = "orange",
-                     main = "Top 10 events causing injuries over period studied",
-                     ylab = "# injuries")
-```
-
-![](GM_Wk_4_RR_Assignment_files/figure-html/healthplots-2.png)<!-- -->
 
 
 ##Results
@@ -246,3 +222,35 @@ injury
 ```
 
 TORNADO was responsible for 5633 fatalities and 91346 injuries in the period studied.
+
+
+
+```r
+par(mfrow=c(2, 1), 
+    oma = c(0, 0, 2, 0),
+    mar = c(12, 8, 4, 2),
+    mgp = c(4, 1, 0))
+
+
+barplot(fatal_top_10$FATALITIES, 
+                     names.arg = rownames(fatal_top_10), 
+                     las = 2,
+                     col = "light blue",
+                     main = "Deaths",
+                     ylab = "# deaths")
+
+barplot(injury_top_10$INJURIES, 
+                     names.arg = rownames(injury_top_10), 
+                     las = 2,
+                     col = "orange",
+                     main = "Injuries",
+                     ylab = "# injuries")
+
+mtext("Top 10 events for deaths and injuries over period studied", 
+      outer = TRUE, 
+      cex = 1.5)
+```
+
+![](GM_Wk_4_RR_Assignment_files/figure-html/healthplots-1.png)<!-- -->
+
+The panel plot shows that Tornado was the most significant factor in deaths and injuries.  Excessive heat caused the next greatest amount of deaths.  All other weather events caused far few deaths or injuries than tornado.
