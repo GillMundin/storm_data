@@ -65,6 +65,49 @@ data <- read.csv(filename)
 
 
 ###Process data for analysis
+The EVTYPE variable in the data has many similar events which need to be grouped.
+The grouping will not be perfect but demonstrates an approach that might be improved upon.
+
+```r
+data$group <- NA #Adds a column of NAs with colname group to the data dataframe
+
+snowrows <- grep("snow",
+                 data$EVTYPE,
+                 ignore.case = TRUE)
+
+icerows <- grep("ice", data$EVTYPE, ignore.case = TRUE)
+
+floodrows <- grep("flood", data$EVTYPE, ignore.case = TRUE)
+
+hailrows <- grep("hail", data$EVTYPE, ignore.case = TRUE)
+
+tornadorows <- grep("tornado", data$EVTYPE, ignore.case = TRUE)
+
+firerows <- grep("fire", data$EVTYPE, ignore.case = TRUE)
+
+windrows <- grep("wind", data$EVTYPE, ignore.case = TRUE)
+
+heatrows <- grep("heat", data$EVTYPE, ignore.case = TRUE)
+
+coldrows <- grep("cold", data$EVTYPE, ignore.case = TRUE)
+
+hurricanerows <- grep("hurricane", data$EVTYPE, ignore.case = TRUE)
+
+
+# Replace the NAs in the group column with one of the weather event groups
+data[snowrows, "group"] <- "SNOW"
+data[icerows, "group"] <- "ICE"
+data[floodrows, "group"] <- "FLOOD"
+data[hailrows, "group"] <- "HAIL"
+data[tornadorows, "group"] <- "TORNADO"
+data[firerows, "group"] <- "FIRE"
+data[windrows, "group"] <- "WIND"
+data[heatrows, "group"] <- "HEAT"
+data[coldrows, "group"] <- "COLD"
+data[hurricanerows, "group"] <- "HURRICANE"
+```
+
+
 Process an analysis dataset for health question
 Relevant variables are STATE, EVTYPE, FATALITIES, INJURIES
 
@@ -100,7 +143,9 @@ tidy00s <- gather(h00s, outcome, count, -STATE, -EVTYPE)
 tidy00s$outcome <- as.factor(tidy00s$outcome)
 
 
-econ <- data %>% select(BGN_DATE, BGN_TIME, STATE, EVTYPE, PROPDMG:CROPDMGEXP, REMARKS, REFNUM)
+econ <- data %>% select(BGN_DATE, BGN_TIME, STATE, EVTYPE, PROPDMG:CROPDMGEXP, REFNUM)
+econ90s <- data90s %>% select(BGN_DATE, BGN_TIME, STATE, EVTYPE, PROPDMG:CROPDMGEXP, REFNUM)
+econ00s <- data00s %>% select(BGN_DATE, BGN_TIME, STATE, EVTYPE, PROPDMG:CROPDMGEXP, REFNUM)
 
 head(tidyhealth, 3)
 ```
@@ -111,6 +156,47 @@ head(tidyhealth, 3)
 ## 2    AL TORNADO FATALITIES     0
 ## 3    AL TORNADO FATALITIES     0
 ```
+
+###Use the EXP information to calculate actual damage to property
+Based on this internet article https://rstudio-pubs-static.s3.amazonaws.com/58957_37b6723ee52b455990e149edde45e5b6.html
+create an EXP dataframe which matches entires to multiplication factors
+
+
+```r
+expdf <- as.data.frame(unique(econ$PROPDMGEXP))
+colnames(expdf) <- "PROPDMGEXP"
+expdf$factor = c(10^3, 10^6, 1, 10^9, 10^6, 1, 10, 10, 10, 1, 10, 10, 10, 100, 10, 100, 1, 10, 10)
+
+# Merge expdf with econ
+econ1 <- merge(econ, expdf, by = "PROPDMGEXP")
+econ2 <- merge(econ1, expdf, by.x = "CROPDMGEXP", by.y = "PROPDMGEXP")
+
+
+# Calculate numerical value for property damage using mutate
+
+econvalue <- econ2 %>%  mutate(property = PROPDMG * factor.x, crop = CROPDMG * factor.y)
+
+# Now sum across all the event types
+
+propsum <- with(econvalue,
+                tapply(property,
+                       EVTYPE,
+                       sum,
+                       na.rm = T)) %>% 
+        as.data.frame()
+
+cropsum <- with(econvalue,
+                tapply(crop, 
+                       EVTYPE, 
+                       sum,
+                       na.rm = T)) %>% 
+        as.data.frame()
+
+
+propmax <- propsum[which.max(propsum$.), ]
+```
+
+
 
 ###Determine which weather event caused most injuries and fatalities across entire US
 Use tapply to determine the number of injuries and fatalities for each weather event.
