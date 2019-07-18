@@ -1,5 +1,5 @@
 ---
-title: "Effect of severe storms on US health and Economy"
+title: "Effect of weather events on US health and Economy, 2002 to 2011"
 author: "Gill Mundin"
 date: "15 July 2019"
 output: 
@@ -11,7 +11,13 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 ##Synopsis
-TBC - Describe analysis briefly in 10 sentences
+Weather data were used to identify the events that had most impact on health and economy.  Data were available from 1950, but results from the period of 2002 to 2011 were reported as the data were more complete.
+
+There were multiple classifications of the same type of weather event.  10 broader groups were chosen and the events were reclassified according to these broad groups to create the analysis datasets.
+
+Using the broad groups, in the period between 2002 and 2011, HEAT was responsible for the most deaths (>2000) and TORNADO was responsible for the most injuries (>10,000).
+
+Flood was most damaging to property and crops, causing > $140 billion and $4 billion respectively.  Hurricane was the next most damaging for property and crops.
 
 
 ##Data processing
@@ -83,48 +89,102 @@ data[hurricanerows, "group"] <- "HURRICANE"
 ```
 
 
-Process an analysis dataset for health question
-Relevant variables are STATE, EVTYPE, FATALITIES, INJURIES
+Generate an analysis dataset for health question. 
+Relevant variables are STATE, group, FATALITIES, INJURIES
 
-Process an analysis dataset for economy question
-Relevant variables are BGN_DATE, BGN_TIME, STATE, EVTYPE, PROPDMG:CROPDMGEXP, REMARKS, REFNUM
+Generate an analysis dataset for economy question. 
+Relevant variables are BGN_DATE, BGN_TIME, STATE, group, PROPDMG:CROPDMGEXP, REMARKS, REFNUM
 
 
 
 ```{r data_sets}
-health <- data %>% select(STATE, EVTYPE, FATALITIES, INJURIES)
-tidyhealth <- gather(health, outcome, count, -STATE, -EVTYPE)
+health <- data %>% select(STATE, group, FATALITIES, INJURIES)
+tidyhealth <- gather(health, outcome, count, -STATE, -group)
 tidyhealth$outcome <- as.factor(tidyhealth$outcome)
 
-# create subsets for last 10 years, and 10 years before that
+# create subsets for last 10 years, 
 # convert data column to date
 
 data$BGN_DATE <- as.Date(as.POSIXct(data$BGN_DATE, format = "%m/%d/%Y %H:%M:%S"))
 
 date1 <- as.Date("2001-12-31")
 date2 <- as.Date("2012-01-01")
-date3 <- as.Date("1991-12-31")
-date4 <- as.Date("2002-01-01")
 
-data90s <- data[data$BGN_DATE > date1 & data$BGN_DATE < date2, ]
-h90s <- data90s %>% select(STATE, EVTYPE, FATALITIES, INJURIES)
-tidyh90s <- gather(h90s, outcome, count, -STATE, -EVTYPE)
-tidyh90s$outcome <- as.factor(tidyh90s$outcome)
-
-data00s <- data[data$BGN_DATE > date3 & data$BGN_DATE < date4, ]
-h00s <- data00s %>% select(STATE, EVTYPE, FATALITIES, INJURIES)
-tidy00s <- gather(h00s, outcome, count, -STATE, -EVTYPE)
+data00s <- data[data$BGN_DATE > date1 & data$BGN_DATE < date2, ]
+h00s <- data00s %>% select(STATE, group, FATALITIES, INJURIES)
+tidy00s <- gather(h00s, outcome, count, -STATE, -group)
 tidy00s$outcome <- as.factor(tidy00s$outcome)
 
+econ <- data %>% select(BGN_DATE, BGN_TIME, STATE, group, PROPDMG:CROPDMGEXP, REFNUM)
+econ00s <- data00s %>% select(BGN_DATE, BGN_TIME, STATE, group, PROPDMG:CROPDMGEXP, REFNUM)
 
-econ <- data %>% select(BGN_DATE, BGN_TIME, STATE, EVTYPE, PROPDMG:CROPDMGEXP, REFNUM)
-econ90s <- data90s %>% select(BGN_DATE, BGN_TIME, STATE, EVTYPE, PROPDMG:CROPDMGEXP, REFNUM)
-econ00s <- data00s %>% select(BGN_DATE, BGN_TIME, STATE, EVTYPE, PROPDMG:CROPDMGEXP, REFNUM)
-
-head(tidyhealth, 3)
 ```
 
-###Use the EXP information to calculate actual damage to property
+
+
+
+###Determine which weather event caused most injuries and fatalities across entire US
+
+Use tapply to determine the number of injuries and fatalities for each weather event using the assigned groups rather than the recorded events
+
+Entire data set and data limited to the most recent 10 years were examined.
+
+```{r health, cache=FALSE}
+harm_event <- with(tidyhealth,
+                   tapply(count, 
+                          list(group, outcome), 
+                          sum,
+                          na.rm = TRUE)) %>% 
+        as.data.frame()
+
+harm_event00s <- with(tidy00s,
+                      tapply(count, 
+                             list(group, outcome), 
+                             sum,
+                             na.rm = TRUE)) %>% 
+        as.data.frame()
+
+fatal <- harm_event[which.max(harm_event$FATALITIES), ] # harm_event must be df for this to work
+fatalevent <- rownames(fatal)
+nfatal <- fatal[1,1]
+
+fatal00s <- harm_event00s[which.max(harm_event00s$FATALITIES), ] # harm_event must be df for this to work
+fatalevent00s <- rownames(fatal00s)
+nfatal00s <- fatal00s[1,1]
+
+injury <- harm_event[which.max(harm_event$INJURIES), ]
+injuryevent <- rownames(injury)
+ninjury <- injury[1,2]
+
+injury00s <- harm_event00s[which.max(harm_event00s$INJURIES), ]
+injuryevent00s <- rownames(injury00s)
+ninjury00s <- injury00s[1,2]
+```
+
+Rank the data health data and determine the top 5 events most damaging to health.
+
+```{r rank_health}
+fatal_rank <- harm_event[order(harm_event$FATALITIES, decreasing = TRUE), ]
+fatal_top_5 <- fatal_rank[1:5, ]
+
+fatal00s_rank <- harm_event00s[order(harm_event00s$FATALITIES, decreasing = TRUE), ]
+fatal00s_top_5 <- fatal00s_rank[1:5, ]
+
+injury_rank <- harm_event[order(harm_event$INJURIES, decreasing = TRUE), ]
+injury_top_5 <- injury_rank[1:5, ]
+
+injury00s_rank <- harm_event00s[order(harm_event00s$INJURIES, decreasing = TRUE), ]
+injury00s_top_5 <- injury00s_rank[1:5, ]
+
+fatal_top_5
+injury_top_5
+
+fatal00s_top_5
+injury00s_top_5
+
+```
+
+###Use the EXP information to calculate actual damage to property - **limited to latest decade**
 Based on this internet article https://rstudio-pubs-static.s3.amazonaws.com/58957_37b6723ee52b455990e149edde45e5b6.html
 create an EXP dataframe which matches entires to multiplication factors
 
@@ -133,8 +193,9 @@ expdf <- as.data.frame(unique(econ$PROPDMGEXP))
 colnames(expdf) <- "PROPDMGEXP"
 expdf$factor = c(10^3, 10^6, 1, 10^9, 10^6, 1, 10, 10, 10, 1, 10, 10, 10, 100, 10, 100, 1, 10, 10)
 
+
 # Merge expdf with econ
-econ1 <- merge(econ, expdf, by = "PROPDMGEXP")
+econ1 <- merge(econ00s, expdf, by = "PROPDMGEXP")
 econ2 <- merge(econ1, expdf, by.x = "CROPDMGEXP", by.y = "PROPDMGEXP")
 
 
@@ -146,121 +207,57 @@ econvalue <- econ2 %>%  mutate(property = PROPDMG * factor.x, crop = CROPDMG * f
 
 propsum <- with(econvalue,
                 tapply(property,
-                       EVTYPE,
+                       group,
                        sum,
                        na.rm = T)) %>% 
         as.data.frame()
+colnames(propsum) <- "propvalue"
+propsum$event <- rownames(propsum)
 
 cropsum <- with(econvalue,
                 tapply(crop, 
-                       EVTYPE, 
+                       group, 
                        sum,
                        na.rm = T)) %>% 
         as.data.frame()
+colnames(cropsum) <- "cropvalue"
+cropsum$event <- rownames(cropsum)
+
+propmax <- propsum[which.max(propsum$propvalue), ]
+propmax
+
+cropmax <- cropsum[which.max(cropsum$cropvalue), ]
+cropmax
 
 
-propmax <- propsum[which.max(propsum$.), ]
+prop00s <- propsum[which.max(propsum$propvalue), ] # propsum must be df for this to work
+propevent00s <- rownames(prop00s)
+nprop00s <- prop00s[1,1]
 
+crop00s <- cropsum[which.max(cropsum$propvalue), ] # cropsum must be df for this to work
+cropevent00s <- rownames(crop00s)
+ncrop00s <- crop00s[1,1]
 
 ```
 
+```{r rank_economy}
+prop_rank <- propsum[order(propsum$propvalue, decreasing = TRUE), ]
 
+crop_rank <- cropsum[order(cropsum$cropvalue, decreasing = TRUE), ]  
 
-###Determine which weather event caused most injuries and fatalities across entire US
-Use tapply to determine the number of injuries and fatalities for each weather event.
-The number of unique weather events is large, with `r length(unique(tidyhealth$EVTYPE))` different types of weather event.
-A meaningful barchart is difficult to format with this many events therefore equations have 
-been used to determine the weather event responsible for the most injuries and fatalities.
+prop_rank$propvalbil <- prop_rank$propvalue / 1000000000
+crop_rank$cropvalbil <- crop_rank$cropvalue / 1000000000
 
-```{r health, cache= T}
-harm_event <- with(tidyhealth,
-                   tapply(count, 
-                          list(EVTYPE, outcome), 
-                          sum,
-                          na.rm = TRUE)) %>% 
-        as.data.frame()
+prop_rank
+crop_rank
 
-harm_event90s <- with(tidyh90s,
-                      tapply(count, 
-                             list(EVTYPE, outcome), 
-                             sum,
-                             na.rm = TRUE)) %>% 
-        as.data.frame()
-
-harm_event00s <- with(tidy00s,
-                      tapply(count, 
-                             list(EVTYPE, outcome), 
-                             sum,
-                             na.rm = TRUE)) %>% 
-        as.data.frame()
-
-fatal <- harm_event[which.max(harm_event$FATALITIES), ] # harm_event must be df for this to work
-fatalevent <- rownames(fatal)
-nfatal <- fatal[1,1]
-
-fatal90s <- harm_event90s[which.max(harm_event90s$FATALITIES), ] # harm_event must be df for this to work
-fatalevent90s <- rownames(fatal90s)
-nfatal90s <- fatal90s[1,1]
-
-fatal00s <- harm_event00s[which.max(harm_event00s$FATALITIES), ] # harm_event must be df for this to work
-fatalevent00s <- rownames(fatal00s)
-nfatal00s <- fatal00s[1,1]
-
-injury <- harm_event[which.max(harm_event$INJURIES), ]
-injuryevent <- rownames(injury)
-ninjury <- injury[1,2]
-
-injury90s <- harm_event90s[which.max(harm_event90s$INJURIES), ]
-injuryevent90s <- rownames(injury90s)
-ninjury90s <- injury90s[1,2]
-
-injury00s <- harm_event00s[which.max(harm_event00s$INJURIES), ]
-injuryevent00s <- rownames(injury00s)
-ninjury00s <- injury00s[1,2]
 ```
-
-Rank the data so that a sensible number of events can be plotted
-
-```{r rank_health}
-fatal_rank <- harm_event[order(harm_event$FATALITIES, decreasing = TRUE), ]
-fatal_top_10 <- fatal_rank[1:10, ]
-
-fatal90s_rank <- harm_event90s[order(harm_event90s$FATALITIES, decreasing = TRUE), ]
-fatal90s_top_10 <- fatal90s_rank[1:10, ]
-
-fatal00s_rank <- harm_event00s[order(harm_event00s$FATALITIES, decreasing = TRUE), ]
-fatal00s_top_10 <- fatal00s_rank[1:10, ]
-
-injury_rank <- harm_event[order(harm_event$INJURIES, decreasing = TRUE), ]
-injury_top_10 <- injury_rank[1:10, ]
-
-injury90s_rank <- harm_event90s[order(harm_event90s$INJURIES, decreasing = TRUE), ]
-injury90s_top_10 <- injury90s_rank[1:10, ]
-
-injury00s_rank <- harm_event00s[order(harm_event00s$INJURIES, decreasing = TRUE), ]
-injury00s_top_10 <- injury00s_rank[1:10, ]
-
-str(fatal_top_10)
-str(injury_top_10)
-
-fatal_top_10
-injury_top_10
-
-fatal00s_top_10
-injury00s_top_10
-
-fatal90s_top_10
-injury90s_top_10
-```
-
-
-
 
 
 ##Results
 ####Across the United States, which types of events (as indicated in the \color{red}{\verb|EVTYPE|}EVTYPE variable) are most harmful with respect to population health?
 
-`r fatalevent` was the weather event responsible for the most injuries and fatalities across the United States:
+`r fatalevent` was the weather event responsible for the most injuries and fatalities across the United States both for the entire data set and the most recent 10 year period:
 
 ```{r}
 fatal
@@ -269,98 +266,106 @@ injury
 fatal00s
 injury00s
 
-fatal90s
-injury90s
-
 ```
 
 `r fatalevent` was responsible for `r nfatal` fatalities and `r as.integer(ninjury)` injuries in the period studied.
 
 
-```{r healthplots, fig.height=10, cache= TRUE}
+`r fatalevent00s` was responsible for `r nfatal00s` fatalities and `r as.integer(ninjury00s)` injuries in the period between 2002 and 2011.
+
+
+```{r healthplots, fig.height=9, cache= FALSE}
 
 par(mfrow=c(2, 1), 
     oma = c(0, 0, 2, 0),
-    mar = c(12, 8, 4, 2),
+    mar = c(12, 8, 2, 2),
     mgp = c(4, 1, 0))
 
 
-barplot(fatal_top_10$FATALITIES, 
-                     names.arg = rownames(fatal_top_10), 
+barplot(fatal_top_5$FATALITIES, 
+                     names.arg = rownames(fatal_top_5), 
                      las = 2,
                      col = "light blue",
                      main = "Deaths",
                      ylab = "# deaths")
 
-barplot(injury_top_10$INJURIES, 
-                     names.arg = rownames(injury_top_10), 
+barplot(injury_top_5$INJURIES, 
+                     names.arg = rownames(injury_top_5), 
                      las = 2,
                      col = "orange",
                      main = "Injuries",
                      ylab = "# injuries")
 
-mtext("Top 10 events for deaths and injuries over period studied", 
+mtext("Top 5 events for deaths and injuries over period studied", 
       outer = TRUE, 
       cex = 1.5)
 
 ```
 
 
-```{r healthplots00s, fig.height=10, cache= TRUE}
+```{r healthplots00s, fig.height=9, cache= FALSE}
 
 par(mfrow=c(2, 1), 
     oma = c(0, 0, 2, 0),
-    mar = c(12, 8, 4, 2),
+    mar = c(12, 8, 2, 2),
     mgp = c(4, 1, 0))
 
 
-barplot(fatal00s_top_10$FATALITIES, 
-                     names.arg = rownames(fatal00s_top_10), 
-                     las = 2,
-                     col = "light blue",
-                     main = "Deaths",
-                     ylab = "# deaths")
+barplot(fatal00s_top_5$FATALITIES, 
+        names.arg = rownames(fatal00s_top_5), 
+        las = 2,
+        col = "light blue",
+        main = "Deaths",
+        ylab = "# deaths")
 
-barplot(injury00s_top_10$INJURIES, 
-                     names.arg = rownames(injury00s_top_10), 
-                     las = 2,
-                     col = "orange",
-                     main = "Injuries",
-                     ylab = "# injuries")
+barplot(injury00s_top_5$INJURIES, 
+        names.arg = rownames(injury00s_top_5), 
+        las = 2,
+        col = "orange",
+        main = "Injuries",
+        ylab = "# injuries")
 
-mtext("Top 10 events for deaths and injuries 2002 - 2011", 
+mtext("Top 5 events for deaths and injuries 2002 - 2011", 
       outer = TRUE, 
       cex = 1.5)
 
 ```
 
 
-```{r healthplots90s, fig.height=10, cache= TRUE}
-
-par(mfrow=c(2, 1), 
-    oma = c(0, 0, 2, 0),
-    mar = c(12, 8, 4, 2),
-    mgp = c(4, 1, 0))
-
-
-barplot(fatal90s_top_10$FATALITIES, 
-                     names.arg = rownames(fatal90s_top_10), 
-                     las = 2,
-                     col = "light blue",
-                     main = "Deaths",
-                     ylab = "# deaths")
-
-barplot(injury90s_top_10$INJURIES, 
-                     names.arg = rownames(injury90s_top_10), 
-                     las = 2,
-                     col = "orange",
-                     main = "Injuries",
-                     ylab = "# injuries")
-
-mtext("Top 10 events for deaths and injuries 1992 - 2001", 
-      outer = TRUE, 
-      cex = 1.5)
-
-```
 
 The panel plot shows that Tornado was the most significant factor in deaths and injuries.  Excessive heat caused the next greatest amount of deaths.  All other weather events caused far few deaths or injuries than tornado.
+
+###Across the United States, which types of events have the greatest economic consequences?
+
+This analysis was limited to the period between 2002 and 2011.
+
+`r propevent00s` caused the most damage to property, and `r cropevent00s` the most damage to crops during the period examined.
+The next most damaging weather event to property and crops was HURRICANE.
+
+
+```{r economy_plots, fig.height=9}
+
+par(mfrow=c(2, 1), 
+    oma = c(0, 0, 2, 0),
+    mar = c(12, 8, 2, 2),
+    mgp = c(4, 1, 0))
+
+barplot(prop_rank$propvalbil, 
+        names.arg = prop_rank$event, 
+        las = 2,
+        col = "light blue",
+        main = "Property damage",
+        ylab = "Value (billion $)")
+
+barplot(crop_rank$cropvalbil, 
+        names.arg = crop_rank$event, 
+        las = 2,
+        col = "orange",
+        main = "Crop damage",
+        ylab = "Value (billion $)")
+
+mtext("Top 10 weather events property and crop damage 2002 - 2011", 
+      outer = TRUE, 
+      cex = 1.5)        
+        
+        
